@@ -1,13 +1,14 @@
+use rand::Rng;
+use std::time::{Duration, Instant};
 use std::{error::Error, io};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::TermionBackend,
-    layout::{Constraint, Direction, Layout, Alignment},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph, Text, Widget},
     Terminal,
 };
-use std::time::{Duration, Instant};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Terminal initialization
@@ -33,13 +34,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     for i in 0..mofang_size {
         color_matrix.push(vec![colors[i]; mofang_size]);
     }
+    // shuffle color_matrix at startup so people will be fucked.
+    let mut cur_row = 0;
+    let mut cur_col = 0;
+
+    shuffle_matrix(&mut color_matrix, 10, &mut cur_row, &mut cur_col);
     let mut constraints = vec![];
     for _i in 0..mofang_size {
         constraints.push(Constraint::Ratio(1, mofang_size as u32));
     }
-
-    let mut cur_row = 0;
-    let mut cur_col = 0;
 
     let start_time = Instant::now();
 
@@ -75,19 +78,18 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .as_ref(),
                     )
                     .split(chunks[0]);
-                
+
                 let cur_time = Instant::now();
                 let time_passed = cur_time.duration_since(start_time).as_secs();
                 let time_str = format!("{} seconds passed!", time_passed);
                 let s1 = &time_str;
                 let t1 = [Text::raw(s1)];
-                
+
                 let title = Paragraph::new(t1.iter())
                     .block(Block::default())
                     .alignment(Alignment::Center);
 
                 f.render_widget(title, chunks[1]);
-    
             }
             {
                 let chunks = Layout::default()
@@ -180,6 +182,26 @@ fn col_cycle(color_matrix: &mut Vec<Vec<Color>>, col_idx: usize) {
         color_matrix[i][col_idx] = color_matrix[i + 1][col_idx];
     }
     color_matrix[l - 1][col_idx] = first;
+}
+
+fn shuffle_matrix(
+    color_matrix: &mut Vec<Vec<Color>>,
+    round: usize,
+    cur_row: &mut usize,
+    cur_col: &mut usize,
+) {
+    let l = color_matrix[0].len();
+    let mut rng = rand::thread_rng();
+
+    for i in 0..round {
+        let row_idx = rng.gen_range(0, l);
+        row_cycle(color_matrix, row_idx);
+        *cur_row = row_idx;
+
+        let col_idx = rng.gen_range(0, l);
+        col_cycle(color_matrix, col_idx);
+        *cur_col = col_idx;
+    }
 }
 
 use std::sync::mpsc;
